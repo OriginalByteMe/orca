@@ -101,6 +101,12 @@ export const copyTerminalPaneMenuAgentSessionId = async (
     makePaneKey(tabId, pane.leafId)
   )
   if (!sessionId) {
+    toast.info(
+      translate(
+        'components.terminalPane.TerminalContextMenu.copySessionIdUnavailable',
+        'No session ID to copy'
+      )
+    )
     pane.terminal.focus()
     return
   }

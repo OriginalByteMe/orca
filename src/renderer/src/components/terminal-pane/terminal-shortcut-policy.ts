@@ -130,6 +130,10 @@ export function resolveTerminalShortcutAction(
     return { type: 'copySelection' }
   }
 
+  if (matches('terminal.copySessionId')) {
+    return { type: 'copySessionId' }
+  }
+
   if (!event.repeat) {
     if (matches('terminal.search')) {
       return { type: 'toggleSearch' }
@@ -161,10 +165,6 @@ export function resolveTerminalShortcutAction(
 
     if (matches('terminal.clearPaneTitle')) {
       return { type: 'clearPaneTitle' }
-    }
-
-    if (matches('terminal.copySessionId')) {
-      return { type: 'copySessionId' }
     }
 
     // Why: recognize the active tab.close binding as a pane-close alias too, so a user who remaps

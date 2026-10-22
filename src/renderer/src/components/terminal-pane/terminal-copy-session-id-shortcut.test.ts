@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppStore } from '@/store'
 import type { ManagedPane, PaneManager } from '@/lib/pane-manager/pane-manager'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
@@ -7,6 +7,9 @@ import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
 import { dispatchTerminalShortcutAction } from './terminal-keyboard-action-dispatch'
 import { resolveTerminalShortcutAction } from './terminal-shortcut-policy'
 import { createTerminalNativeOnlyShortcutTracker } from './terminal-native-only-shortcut'
+
+const { toastInfoMock } = vi.hoisted(() => ({ toastInfoMock: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { info: toastInfoMock, success: vi.fn(), error: vi.fn() } }))
 
 type DispatchContext = Parameters<typeof dispatchTerminalShortcutAction>[3]
 
@@ -33,7 +36,7 @@ function seedAgentPane(): void {
   })
 }
 
-async function pressChord() {
+async function pressChord({ repeat = false } = {}) {
   const writeTerminalClipboardText = vi.fn().mockResolvedValue(undefined)
   vi.stubGlobal('api', { ui: { writeTerminalClipboardText } })
   const tracker = createTerminalNativeOnlyShortcutTracker()
@@ -42,7 +45,8 @@ async function pressChord() {
     code: 'KeyI',
     metaKey: true,
     shiftKey: true,
-    cancelable: true
+    cancelable: true,
+    repeat
   })
   // Why: the copy always refocuses the pane last, which marks the end of its async work.
   const { promise: copyFinished, resolve: focus } = Promise.withResolvers<void>()
@@ -76,19 +80,47 @@ async function pressChord() {
   const action = resolveTerminalShortcutAction(event, true, 'false', 0, false, KEYBINDINGS)
   if (action) {
     dispatchTerminalShortcutAction(action, event, manager, context)
-    await copyFinished
+    if (!repeat) {
+      await copyFinished
+    }
   }
-  return { action, copied: writeTerminalClipboardText.mock.calls.map(([text]) => text) }
+  return {
+    action,
+    prevented: event.defaultPrevented,
+    copied: writeTerminalClipboardText.mock.calls.map(([text]) => text)
+  }
 }
 
 describe('terminal Copy Session ID shortcut', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  beforeEach(() => {
+    useAppStore.setState({ agentStatusByPaneKey: {}, paneForegroundAgentByPaneKey: {} })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    toastInfoMock.mockClear()
+  })
 
   it('copies the focused agent pane session id when its chord is pressed', async () => {
     seedAgentPane()
     expect(await pressChord()).toEqual({
       action: { type: 'copySessionId' },
+      prevented: true,
       copied: [SESSION_ID]
     })
+  })
+
+  it('keeps a held chord out of the terminal without copying again', async () => {
+    seedAgentPane()
+    expect(await pressChord({ repeat: true })).toEqual({
+      action: { type: 'copySessionId' },
+      prevented: true,
+      copied: []
+    })
+  })
+
+  it('says so when the pane has no session to copy', async () => {
+    expect((await pressChord()).copied).toEqual([])
+    expect(toastInfoMock).toHaveBeenCalledWith('No session ID to copy')
   })
 })

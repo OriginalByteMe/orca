@@ -97,6 +97,15 @@ export function dispatchTerminalShortcutAction(
     }
     return
   }
+  if (action.type === 'copySessionId') {
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    const pane = manager.getActivePane() ?? manager.getPanes()[0]
+    if (pane && !event.repeat) {
+      void copyTerminalPaneMenuAgentSessionId(pane, tabId)
+    }
+    return
+  }
   if (event.repeat) {
     return
   }
@@ -196,15 +205,6 @@ export function dispatchTerminalShortcutAction(
     const pane = manager.getActivePane() ?? manager.getPanes()[0]
     if (pane) {
       onClearPaneTitle(pane.id)
-    }
-    return
-  }
-  if (action.type === 'copySessionId') {
-    event.preventDefault()
-    event.stopImmediatePropagation()
-    const pane = manager.getActivePane() ?? manager.getPanes()[0]
-    if (pane) {
-      void copyTerminalPaneMenuAgentSessionId(pane, tabId)
     }
     return
   }

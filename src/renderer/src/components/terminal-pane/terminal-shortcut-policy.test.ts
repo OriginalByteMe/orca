@@ -492,16 +492,6 @@ describe('resolveTerminalShortcutAction', () => {
     expect(resolveTerminalShortcutAction(chord, true, 'false', 0, false, keybindings)).toEqual({
       type: 'copySessionId'
     })
-    expect(
-      resolveTerminalShortcutAction(
-        { ...chord, repeat: true },
-        true,
-        'false',
-        0,
-        false,
-        keybindings
-      )
-    ).toBeNull()
   })
 
   it('lets Ctrl+D pass through as EOF on non-Mac, requires Shift for split (#586)', () => {
